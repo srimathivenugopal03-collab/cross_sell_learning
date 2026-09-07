@@ -1,131 +1,333 @@
-# NIQ Innovation Enablement - Object Counter Challenge
+# NielsenIQ Innovation Enablement – Object Counter
 
-The goal of this repo is demonstrate how to apply Hexagonal Architecture in a ML based system.
+A modular Python service for **object detection, prediction, and object counting**, implemented using **Hexagonal Architecture (Ports and Adapters)**.
 
-This application consists in a Flask API that receives an image and a threshold and returns the number of objects detected in the image.
+The application exposes REST APIs for image prediction and object counting, with support for pluggable detector and repository implementations.
 
-The application is composed of three layers:
+---
 
-- **entrypoints**: Exposes the API and receives the requests. It is also responsible for validating the requests and returning the responses.
+## Architecture
 
-- **adapters**: Communicates with external services. It is responsible for translating the domain objects to the external services objects and vice-versa.
+The application separates business logic from external technologies using a Ports and Adapters approach.
 
-- **domain**: Business logic. It is responsible for orchestrating the calls to the external services and for applying the business rules.
-
-The model used in this example has been taken from 
-[Kaggle](https://www.kaggle.com/models/google/mobilenet-v2/tensorFlow1/openimages-v4-ssd-mobilenet-v2/1)
-
-
-## Instructions to setup the model (Unix)
-```bash
-mkdir -p tmp/model/ssd_mobilenet_v2/1
-curl -L -o tmp/model.tar.gz \
-  http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz
-tar -xzvf tmp/model.tar.gz -C tmp/model
-mv \
-    tmp/model/ssd_mobilenet_v2_coco_2018_03_29/saved_model/saved_model.pb \
-    tmp/model/ssd_mobilenet_v2/1
-chmod -R 777 tmp/model
-rm tmp/model.tar.gz
-rm -rf tmp/model/ssd_mobilenet_v2_coco_2018_03_29
+```text
+                  ┌─────────────────────────┐
+                  │       Flask API         │
+                  │      Entry Point        │
+                  └────────────┬────────────┘
+                               │
+                               ▼
+                  ┌─────────────────────────┐
+                  │        Domain           │
+                  │                         │
+                  │  Prediction / Counting  │
+                  │  Business Logic         │
+                  │                         │
+                  │  ObjectDetector Port    │
+                  │  ObjectCountRepo Port   │
+                  └────────────┬────────────┘
+                               │
+                 ┌─────────────┴─────────────┐
+                 ▼                           ▼
+        ┌─────────────────┐         ┌─────────────────┐
+        │ Detector        │         │ Repository      │
+        │ Adapters        │         │ Adapters        │
+        │                 │         │                 │
+        │ Fake            │         │ In-Memory       │
+        │ TensorFlow      │         │ MongoDB         │
+        │ Serving         │         │ PostgreSQL      │
+        └─────────────────┘         └─────────────────┘
 ```
 
-By the end you should have the following structure:
- ```
- tmp/
-  model/
-    ssd_mobilenet_v2/
-        1/
-        saved_model.pb
- ```
+This structure keeps the domain layer independent of databases, model-serving technologies, and frameworks.
 
-## Setup and run Tensorflow Serving
+---
 
-### For unix systems
-```bash
-num_physical_cores=$(lscpu --all --parse=SOCKET,CORE | grep -v '^#' | uniq | wc -l)
+## Features
 
-docker run --rm -d \
-    --name=tfserving \
-    -p 8501:8501 \
-    --mount type=bind,source=$(pwd)/tmp/model,target=/models \
-    -e OMP_NUM_THREADS=$num_physical_cores \
-    -e TENSORFLOW_INTRA_OP_PARALLELISM=$num_physical_cores \
-    -e MODEL_NAME=ssd_mobilenet_v2 \
-    tensorflow/serving
-```
+* Object prediction from uploaded images
+* Confidence-threshold filtering
+* Object counting and aggregation
+* PostgreSQL repository adapter
+* MongoDB repository adapter
+* In-memory repository for development/testing
+* TensorFlow Serving detector integration
+* Input validation and structured API error responses
+* Unit, integration, and E2E tests
+* Environment-based configuration
+* Makefile for common development tasks
 
-### For Windows (Powershell)
-```powershell
-$num_physical_cores=(Get-WmiObject Win32_Processor | Select-Object NumberOfCores).NumberOfCores
+---
 
-docker run --rm -d `
-    --name=tfserving `
-    -p 8501:8501 `
-    -v "$pwd\tmp\model:/models" `
-    -e OMP_NUM_THREADS=$num_physical_cores `
-    -e TENSORFLOW_INTRA_OP_PARALLELISM=$num_physical_cores `
-    -e MODEL_NAME=ssd_mobilenet_v2 `
-    tensorflow/serving
-```
+## Quick Start
 
-## Running MongoDB
+### Prerequisites
+
+* Python 3.10+
+* `uv`
+* Git
+
+### Install dependencies
 
 ```bash
-docker run --rm --name test-mongo -p 27017:27017 -d mongo:latest
+uv sync --all-extras
 ```
 
-## Setup virtualenv (Python >= 3.10)
-
-Unix:
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-export PYTHONPATH=.
-```
-
-Powershell:
-```powershell
-python3 -m venv .venv
-.venv\scripts\Activate.ps1
-pip install -r requirements.txt
-$Env:PYTHONPATH = "."
-```
-
-
-## Run the application
-
-### Using fakes
-```bash
-python -m counter.entrypoints.webapp
-```
-
-### Using real services in docker containers
-
-Unix
-```bash
-ENV=prod python -m counter.entrypoints.webapp
-```
-Powershell: 
-```powershell
-$env:ENV = "prod"
-python -m counter.entrypoints.webapp
-```
-
-## Call the service
+### Run tests
 
 ```bash
- curl -F "threshold=0.9" -F "file=@resources/images/boy.jpg" http://localhost:5000/object-count
- curl -F "threshold=0.9" -F "file=@resources/images/cat.jpg" http://localhost:5000/object-count
- curl -F "threshold=0.9" -F "file=@resources/images/food.jpg" http://localhost:5000/object-count 
+uv run pytest
 ```
 
-> [!TIP]
-> If you face service connectivity issues on Windows, try replacing "localhost" with "127.0.0.1" globally
+### Start the application
 
-## Run the tests
+```bash
+uv run python -m counter.entrypoints.webapp
+```
 
+The API will be available at:
+
+```text
+http://127.0.0.1:5000
 ```
-pytest
+
+---
+
+## API Usage
+
+### 1. Predictions
+
+**POST `/predictions`**
+
+Accepts an image and confidence threshold and returns predictions above the specified threshold.
+
+```bash
+curl -F "threshold=0.5" \
+     -F "file=@resources/images/boy.jpg" \
+     http://127.0.0.1:5000/predictions
 ```
+
+Example response:
+
+```json
+[
+  {
+    "class_name": "cat",
+    "score": 0.99919,
+    "box": {
+      "xmin": 0.3672,
+      "ymin": 0.2783,
+      "xmax": 0.7358,
+      "ymax": 0.6988
+    }
+  }
+]
+```
+
+---
+
+### 2. Object Count
+
+**POST `/object-count`**
+
+Detects objects and updates the configured repository with cumulative counts.
+
+```bash
+curl -F "threshold=0.5" \
+     -F "file=@resources/images/boy.jpg" \
+     http://127.0.0.1:5000/object-count
+```
+
+Example response:
+
+```json
+{
+  "current_objects": [
+    {
+      "object_class": "cat",
+      "count": 1
+    }
+  ],
+  "total_objects": [
+    {
+      "object_class": "cat",
+      "count": 4
+    }
+  ]
+}
+```
+
+---
+
+## Configuration
+
+Application configuration is controlled through environment variables.
+
+Typical configuration includes:
+
+| Variable            | Description               |
+| ------------------- | ------------------------- |
+| `ENV`               | Application environment   |
+| `REPOSITORY`        | Repository implementation |
+| `MONGO_HOST`        | MongoDB host              |
+| `MONGO_PORT`        | MongoDB port              |
+| `MONGO_DATABASE`    | MongoDB database          |
+| `POSTGRES_HOST`     | PostgreSQL host           |
+| `POSTGRES_PORT`     | PostgreSQL port           |
+| `POSTGRES_DATABASE` | PostgreSQL database       |
+| `POSTGRES_USER`     | PostgreSQL user           |
+| `POSTGRES_PASSWORD` | PostgreSQL password       |
+| `TFS_HOST`          | TensorFlow Serving host   |
+| `TFS_PORT`          | TensorFlow Serving port   |
+| `MODEL_NAME`        | Model name                |
+
+A `.env` file can be used for local configuration.
+
+---
+
+## Database Support
+
+The repository layer provides multiple implementations behind the same domain interface:
+
+* **In-memory** – useful for development and testing
+* **MongoDB** – document-based persistence
+* **PostgreSQL** – relational persistence using SQLAlchemy
+
+The domain layer does not directly depend on any database implementation.
+
+---
+
+## Testing
+
+The project includes:
+
+* Unit tests
+* Integration tests
+* End-to-end API tests
+
+Run the complete test suite:
+
+```bash
+uv run pytest
+```
+
+Run tests with coverage:
+
+```bash
+uv run pytest --cov=counter tests/
+```
+
+Run code-quality checks:
+
+```bash
+uv run ruff check counter tests
+uv run ruff format --check counter tests
+```
+
+---
+
+## Makefile
+
+Common development tasks are available through the Makefile.
+
+```bash
+make install
+make test
+make lint
+make format
+make typecheck
+make check
+make run-dev
+```
+
+Use:
+
+```bash
+make help
+```
+
+to see the available commands, if supported by the Makefile.
+
+---
+
+## Key Design Decisions
+
+### Hexagonal Architecture
+
+Business logic is kept independent from Flask, databases, and model-serving technologies. This makes individual components easier to test and replace.
+
+### Repository Pattern
+
+Persistence is abstracted behind `ObjectCountRepo`, allowing the application to switch between in-memory, MongoDB, and PostgreSQL implementations without changing domain logic.
+
+### Detector Abstraction
+
+Object detection is accessed through the `ObjectDetector` interface. This allows different detection implementations to be introduced without modifying the core counting logic.
+
+### PostgreSQL Adapter
+
+The PostgreSQL implementation uses SQLAlchemy to provide database access, transaction handling, and object-relational mapping while keeping database-specific code inside the adapter layer.
+
+---
+
+## Improvements Implemented
+
+The following improvements were made as part of the assignment:
+
+* Added `/predictions` API endpoint
+* Added PostgreSQL repository implementation
+* Improved request validation and error handling
+* Added integration/E2E test coverage
+* Added environment-based configuration
+* Improved MongoDB client reuse
+* Added automated development commands through Makefile
+
+Further architectural improvements and design considerations are documented in:
+
+* `docs/code_review_and_improvements.md`
+* `docs/internal_models_architecture.md`
+* `docs/multi_framework_support.md`
+
+---
+
+## Future Improvements
+
+Potential next steps include:
+
+* OpenAPI/Swagger documentation
+* Structured application logging
+* Authentication and authorization
+* Additional model-framework adapters
+* Improved production monitoring and observability
+* Support for multiple internally trained models through a model registry
+
+---
+
+## Project Structure
+
+```text
+object-counter/
+├── counter/
+│   ├── domain/
+│   ├── adapters/
+│   ├── entrypoints/
+│   └── config.py
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+├── resources/
+├── docs/
+├── Makefile
+├── ASSESSMENT.md
+├── README.md
+└── pyproject.toml
+```
+
+---
+
+## Assignment
+
+This repository contains the implementation and design proposals for the **NielsenIQ Innovation Enablement Machine Learning | Generative AI take-home assignment**.
+
+Detailed implementation decisions and proposed improvements are available in `ASSESSMENT.md`.

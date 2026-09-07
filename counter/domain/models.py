@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import List
 
 
@@ -27,3 +27,9 @@ class ObjectCount:
 class CountResponse:
     current_objects: List[ObjectCount]
     total_objects: List[ObjectCount]
+
+
+@dataclass
+class PredictionResponse:
+    predictions: List[Prediction]
+    total_detected: int
