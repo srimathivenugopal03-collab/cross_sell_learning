@@ -1,0 +1,91 @@
+services:
+  # 1. Main Flask Web API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: object-counter-api
+    ports:
+      - "5000:5000"
+    environment:
+      - ENV=prod
+      - DB_TYPE=postgres
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/counter_db
+      - DETECTOR_TYPE=tfs
+      - TFS_HOST=tfserving
+      - TFS_PORT=8501
+      - MODEL_NAME=ssd_mobilenet_v2
+      - LOG_LEVEL=INFO
+      - ENABLE_DEBUG_DRAW=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      tfserving:
+        condition: service_started
+    networks:
+      - counter-net
+    restart: unless-stopped
+
+  # 2. PostgreSQL Relational Database (Primary Datastore)
+  postgres:
+    image: postgres:16-alpine
+    container_name: counter-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=counter_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d counter_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - counter-net
+    restart: unless-stopped
+
+  # 3. MongoDB (Document Datastore Adapter Support)
+  mongodb:
+    image: mongo:7-jammy
+    container_name: counter-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=prod_counter
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - counter-net
+    restart: unless-stopped
+
+  # 4. TensorFlow Serving (Inference Backend)
+  tfserving:
+    image: tensorflow/serving:latest
+    container_name: counter-tfserving
+    ports:
+      - "8501:8501"
+    environment:
+      - MODEL_NAME=ssd_mobilenet_v2
+    volumes:
+      - ./tmp/model:/models
+    networks:
+      - counter-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  mongo_data:
+    driver: local
+
+networks:
+  counter-net:
+    driver: bridge

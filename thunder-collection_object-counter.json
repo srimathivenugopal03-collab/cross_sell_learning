@@ -1,0 +1,164 @@
+{
+  "clientName": "Thunder Client",
+  "collectionName": "Object Counter & Prediction API",
+  "collectionId": "c4d7e9b2-3f1a-4e8c-9b5d-8a2e1f4b7c90",
+  "dateExported": "2026-09-04",
+  "version": "1.1",
+  "folders": [
+    {
+      "_id": "fld_core_endpoints",
+      "name": "Core Endpoints",
+      "containerId": "",
+      "created": "2026-09-04",
+      "sortNum": 10000
+    },
+    {
+      "_id": "fld_validation_tests",
+      "name": "Validation & Error Scenarios",
+      "containerId": "",
+      "created": "2026-09-04",
+      "sortNum": 20000
+    }
+  ],
+  "requests": [
+    {
+      "_id": "req_health_check",
+      "colId": "c4d7e9b2-3f1a-4e8c-9b5d-8a2e1f4b7c90",
+      "containerId": "fld_core_endpoints",
+      "name": "1. Health Check (GET /health)",
+      "url": "http://127.0.0.1:5000/health",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2026-09-04",
+      "modified": "2026-09-04",
+      "headers": [],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "req_readiness_check",
+      "colId": "c4d7e9b2-3f1a-4e8c-9b5d-8a2e1f4b7c90",
+      "containerId": "fld_core_endpoints",
+      "name": "2. Readiness Check (GET /ready)",
+      "url": "http://127.0.0.1:5000/ready",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2026-09-04",
+      "modified": "2026-09-04",
+      "headers": [],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "req_predictions_objects",
+      "colId": "c4d7e9b2-3f1a-4e8c-9b5d-8a2e1f4b7c90",
+      "containerId": "fld_core_endpoints",
+      "name": "3. Object Predictions (POST /predictions)",
+      "url": "http://127.0.0.1:5000/predictions",
+      "method": "POST",
+      "sortNum": 30000,
+      "created": "2026-09-04",
+      "modified": "2026-09-04",
+      "headers": [],
+      "params": [],
+      "body": {
+        "type": "formdata",
+        "raw": "",
+        "form": [
+          {
+            "name": "threshold",
+            "value": "0.5"
+          },
+          {
+            "name": "file",
+            "value": "resources/images/boy.jpg",
+            "type": "file"
+          }
+        ]
+      },
+      "tests": []
+    },
+    {
+      "_id": "req_object_count",
+      "colId": "c4d7e9b2-3f1a-4e8c-9b5d-8a2e1f4b7c90",
+      "containerId": "fld_core_endpoints",
+      "name": "4. Object Count & Persist (POST /object-count)",
+      "url": "http://127.0.0.1:5000/object-count",
+      "method": "POST",
+      "sortNum": 40000,
+      "created": "2026-09-04",
+      "modified": "2026-09-04",
+      "headers": [],
+      "params": [],
+      "body": {
+        "type": "formdata",
+        "raw": "",
+        "form": [
+          {
+            "name": "threshold",
+            "value": "0.5"
+          },
+          {
+            "name": "file",
+            "value": "resources/images/cat.jpg",
+            "type": "file"
+          }
+        ]
+      },
+      "tests": []
+    },
+    {
+      "_id": "req_validation_missing_file",
+      "colId": "c4d7e9b2-3f1a-4e8c-9b5d-8a2e1f4b7c90",
+      "containerId": "fld_validation_tests",
+      "name": "5. Missing File (Expects 400 Bad Request)",
+      "url": "http://127.0.0.1:5000/predictions",
+      "method": "POST",
+      "sortNum": 50000,
+      "created": "2026-09-04",
+      "modified": "2026-09-04",
+      "headers": [],
+      "params": [],
+      "body": {
+        "type": "formdata",
+        "raw": "",
+        "form": [
+          {
+            "name": "threshold",
+            "value": "0.5"
+          }
+        ]
+      },
+      "tests": []
+    },
+    {
+      "_id": "req_validation_invalid_threshold",
+      "colId": "c4d7e9b2-3f1a-4e8c-9b5d-8a2e1f4b7c90",
+      "containerId": "fld_validation_tests",
+      "name": "6. Invalid Threshold Out of Range (Expects 400 Bad Request)",
+      "url": "http://127.0.0.1:5000/predictions",
+      "method": "POST",
+      "sortNum": 60000,
+      "created": "2026-09-04",
+      "modified": "2026-09-04",
+      "headers": [],
+      "params": [],
+      "body": {
+        "type": "formdata",
+        "raw": "",
+        "form": [
+          {
+            "name": "threshold",
+            "value": "2.5"
+          },
+          {
+            "name": "file",
+            "value": "resources/images/boy.jpg",
+            "type": "file"
+          }
+        ]
+      },
+      "tests": []
+    }
+  ]
+}
